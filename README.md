@@ -17,8 +17,8 @@ Il faut choisir d'abord quel format on utilise pour les mouvements.
 ### Idées
 
 Peut etre avoir une option ou on filtre a la sortie du transformer les coups impossibles.
-J'ai peur que sinon a force de tester des coups qui marchent tres rarement (par exemple transformer un pion en dame) soient fortement penalises par le modele car en general interdits, et que donc le modele ne les decouvre jamais. 
+J'ai peur que sinon a force de tester des coups qui marchent tres rarement (par exemple transformer un pion en dame) ces coups soient fortement penalises par le modele car en general interdits, et que donc le modele ne les decouvre jamais. 
 Alors que si on filtre, pas besoin pour le modele de les penaliser tant qu'il n'a pas eu l'occasion de les jouer.
 
 
-On peut peut etre faire un transformer avec trois "tetes": apres l'avant dernier layer, on met trois differentes couches: une pour la position de depart (genre e2) une pour la position d'arrivee (genre f4) et un pour la promotion de piece(genre q, k, ou null). L'objectif est de reduire la taille de l'espace de sortie. En ecrivant je me rends compte que ca marche pas bien parce que la case de depart et d'arrivee sont pas independantes, et donc tirer les deux independamment avec un softmax va mal marcher, a investiguer.
+On peut peut etre faire un transformer avec trois "tetes": apres l'avant dernier layer, on met trois differentes couches: une pour la position de depart (genre e2) une pour la position d'arrivee (genre f4) et un pour la promotion de piece(genre dame, tour, fou ou null). L'objectif est de reduire la taille de l'espace de sortie. En ecrivant je me rends compte que ca marche pas bien parce que la case de depart et d'arrivee sont pas independantes, et donc tirer les deux independamment avec un softmax va mal marcher, a investiguer.
