@@ -5,7 +5,6 @@ from typing import List
 N_UCI_MOVES = 64*63 + 8*2*4 # standard moves + promotions
 moves_list: List[chess.Move] # the list of possible UCI moves, to go from integer to a move
 
-
 class Transformer:
     def __init__(self):
         pass
