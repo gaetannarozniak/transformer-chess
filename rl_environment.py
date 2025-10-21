@@ -22,6 +22,7 @@ class StockfishEnvironment:
         # policy action
         self.board.push(action)
         if self.board.is_game_over():
+            print("The agent won the game !")
             return self._get_observation(), 1.0, True, False, dict()
 
         # stockfish action
