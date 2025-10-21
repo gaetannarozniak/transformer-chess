@@ -1,26 +1,36 @@
 import chess
-import chess.engine
-from typing import List
+import torch.nn as nn
+import random
+from rl_environment import Observation, StockfishEnvironment
 
-N_UCI_MOVES = 64*63 + 8*2*4 # standard moves + promotions
-moves_list: List[chess.Move] # the list of possible UCI moves, to go from integer to a move
 
-class Transformer:
-    def __init__(self):
-        pass
+class RandomPolicy(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
 
-    def __call__(self):
-        pass
+    def forward(self, obs: Observation) -> chess.Move:
+        return random.choice(obs.legal_moves)
 
-engine = chess.engine.SimpleEngine.popen_uci(r"/usr/local/Cellar/stockfish/17.1/bin/stockfish")
 
-board = chess.Board()
-while not board.is_game_over():
-    result = engine.play(board, chess.engine.Limit(time=0.001))
-    if result.move is None:
-        print("result is None")
-    else:
-        print(result.move)
-        board.push(result.move)
+def run_episode(agent: RandomPolicy, env: StockfishEnvironment) -> int:
+    obs, _ = env.reset()
+    while True:
+        action = agent(obs)
+        obs, reward, terminated, truncated, _ = env.step(action)
+        if terminated or truncated:
+            return len(env.board.move_stack)
 
-engine.quit()
+def main():
+    agent = RandomPolicy()
+    env = StockfishEnvironment(stockfish_time=0.01)
+    for _ in range(10):
+        l = run_episode(agent, env)
+        print(l)
+    env.close()
+
+if __name__ == "__main__":
+    main()
+
+
+
+
