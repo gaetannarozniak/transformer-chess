@@ -1,3 +1,5 @@
+import numpy as np
+import matplotlib.pyplot as plt
 import tqdm
 import utils
 import chess
@@ -20,7 +22,7 @@ class TabularPolicy(nn.Module):
         super().__init__()
         generator = torch.Generator()
         generator.manual_seed(seed)
-        self.logits = torch.randn(utils.NUMBER_UCI_MOVES, generator=generator, requires_grad=True)
+        self.logits = nn.Parameter(torch.randn(utils.NUMBER_UCI_MOVES, generator=generator, requires_grad=True))
 
     def forward(self, obs: Observation) -> tuple[chess.Move, torch.Tensor]:
         legal_ids: list[int] = [utils.move_to_int[move] for move in obs.legal_moves]
@@ -37,7 +39,7 @@ class TabularPolicy(nn.Module):
         g = 0.0 
         for reward, logprob in zip(reversed(rewards), reversed(logprobs)):
             g = reward + gamma * g 
-            loss += g*logprob
+            loss += -g*logprob
         return loss
 
 
@@ -55,17 +57,24 @@ def run_episode(agent: nn.Module, env: StockfishEnvironment):
 
 def main():
     agent = TabularPolicy()
-    optimizer = AdamW(agent.parameters())
-    env = StockfishEnvironment(stockfish_time=0.001)
+    optimizer = AdamW(agent.parameters(), lr=0.1)
+    env = StockfishEnvironment(stockfish_time=0.0001)
     lengths = []
-    for _ in tqdm.tqdm(range(10)):
+    first_moves = chess.Board().legal_moves
+    for _ in tqdm.tqdm(range(10000)):
         logprobs, rewards, episode_length = run_episode(agent, env)
-        loss = agent.compute_loss(0.95, rewards, logprobs)
+        loss = agent.compute_loss(0.97, rewards, logprobs)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         lengths.append(episode_length)
+        print([agent.logits[utils.move_to_int[move]].item() for move in first_moves])
     env.close()
+    print(lengths)
+    lengths = np.array(lengths)
+    lengths = np.convolve(lengths, np.ones(30))
+    plt.plot(lengths)
+    plt.show()
 
 if __name__ == "__main__":
     main()
