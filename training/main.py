@@ -1,13 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import tqdm
-import utils
+from . import utils
 import chess
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
 import random
-from rl_environment import Observation, StockfishEnvironment
+from .rl_environment import Observation, StockfishEnvironment
 
 
 class RandomPolicy(nn.Module):

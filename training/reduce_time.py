@@ -2,8 +2,8 @@ from multiprocessing import Pool
 import multiprocessing
 import chess
 import time
-from rl_environment import Observation, StockfishEnvironment
-from main import RandomPolicy, run_episode
+from .rl_environment import Observation, StockfishEnvironment
+from .main import RandomPolicy, run_episode
 from tqdm import tqdm
 import torch.nn as nn
 
