@@ -22,3 +22,5 @@ Alors que si on filtre, pas besoin pour le modele de les penaliser tant qu'il n'
 
 
 On peut peut etre faire un transformer avec trois "tetes": apres l'avant dernier layer, on met trois differentes couches: une pour la position de depart (genre e2) une pour la position d'arrivee (genre f4) et un pour la promotion de piece(genre dame, tour, fou ou null). L'objectif est de reduire la taille de l'espace de sortie. En ecrivant je me rends compte que ca marche pas bien parce que la case de depart et d'arrivee sont pas independantes, et donc tirer les deux independamment avec un softmax va mal marcher, a investiguer.
+
+Y'a un format d'écriture des coups (UCI) qui est directement dans le format 'debut arrivée promotion' genre e2e4 e7e5 g1f3 b8c6 et promotion c'est genre e7e8q.
