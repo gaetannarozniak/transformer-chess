@@ -1,0 +1,14 @@
+[project]
+name = "chess-webapp"
+version = "0.1.0"
+description = "FastAPI web application for playing chess"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "python-chess>=1.999",
+    "pydantic>=2.10.0",
+    "stockfish>=3.28.0",
+    "structlog>=24.1.0",
+    "uvicorn[standard]>=0.32.0",
+]
+

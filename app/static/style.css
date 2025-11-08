@@ -1,0 +1,282 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #fff;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    width: 100%;
+}
+
+h1 {
+    text-align: center;
+    font-weight: 300;
+    margin-bottom: 30px;
+    font-size: 24px;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+button {
+    padding: 8px 16px;
+    border: 1px solid #000;
+    background: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+button:hover:not(:disabled) {
+    background: #f5f5f5;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.game-info {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.status {
+    margin-bottom: 5px;
+}
+
+.turn {
+    color: #666;
+}
+
+.ai-info {
+    color: #666;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.board-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    width: 100%;
+    min-height: 600px;
+    padding: 40px;
+}
+
+.chess-board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    width: 600px;
+    height: 600px;
+    max-width: 100%;
+    aspect-ratio: 1;
+    border: 1px solid #000;
+    flex-shrink: 0;
+}
+
+.captured-top-left {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 10px;
+}
+
+.captured-bottom-right {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 10px;
+}
+
+.captured-list {
+    font-size: 24px;
+    min-height: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+}
+
+.chess-board.flipped {
+    transform: rotate(180deg);
+}
+
+.chess-board.flipped .square {
+    transform: rotate(180deg);
+}
+
+.square {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 48px;
+    cursor: pointer;
+    position: relative;
+    border: 1px solid #797979;
+}
+
+.square.light {
+    background-color: #e8bb63;
+}
+
+.square.dark {
+    background-color: #794f34;
+}
+
+.square.selected {
+    background-color: #e0e0e0 !important;
+}
+
+.square.possible-move::after {
+    content: '';
+    width: 20%;
+    height: 20%;
+    border-radius: 50%;
+    background-color: #000;
+    opacity: 0.3;
+}
+
+.square:hover:not(.selected) {
+    background-color: #f5f5f5 !important;
+}
+
+.square.white-piece {
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.square.black-piece {
+    color: #000;
+}
+
+.coordinates {
+    position: absolute;
+    font-size: 10px;
+    color: #999;
+}
+
+.coords-file {
+    bottom: 2px;
+    right: 4px;
+}
+
+.coords-rank {
+    top: 2px;
+    left: 4px;
+}
+
+.promotion-dialog {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 1px solid #000;
+    padding: 20px;
+    z-index: 1000;
+}
+
+.promotion-dialog.show {
+    display: block;
+}
+
+.promotion-dialog-title {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.promotion-pieces {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.promotion-piece {
+    font-size: 48px;
+    padding: 10px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    background: white;
+}
+
+.promotion-piece:hover {
+    background: #f5f5f5;
+}
+
+.game-over-dialog {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 1px solid #000;
+    padding: 30px;
+    z-index: 1001;
+    text-align: center;
+    min-width: 250px;
+}
+
+.game-over-dialog.show {
+    display: block;
+}
+
+.game-over-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.game-over-message {
+    font-size: 16px;
+    margin-bottom: 20px;
+    color: #666;
+}
+
+.game-over-button {
+    padding: 10px 20px;
+    border: 1px solid #000;
+    background: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.game-over-button:hover {
+    background: #f5f5f5;
+}
+
+@media (max-width: 768px) {
+    .square {
+        font-size: 32px;
+    }
+}
+

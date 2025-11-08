@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Chess</h1>
+        
+        <div class="controls">
+            <button onclick="createNewGame('white')">Play as White</button>
+            <button onclick="createNewGame('black')">Play as Black</button>
+        </div>
+
+        <div class="game-info">
+            <div class="status" id="status">No game started</div>
+            <div class="turn" id="turn"></div>
+            <div class="ai-info" id="aiInfo"></div>
+        </div>
+
+        <div class="board-wrapper">
+            <div class="captured-top-left">
+                <div class="captured-list" id="capturedWhite"></div>
+            </div>
+            <div class="chess-board" id="chessBoard"></div>
+            <div class="captured-bottom-right">
+                <div class="captured-list" id="capturedBlack"></div>
+            </div>
+        </div>
+        
+        <div class="promotion-dialog" id="promotionDialog">
+            <div class="promotion-dialog-title">Choose promotion piece:</div>
+            <div class="promotion-pieces">
+                <div class="promotion-piece" onclick="selectPromotion('q')" id="promo-q">♕</div>
+                <div class="promotion-piece" onclick="selectPromotion('r')" id="promo-r">♖</div>
+                <div class="promotion-piece" onclick="selectPromotion('b')" id="promo-b">♗</div>
+                <div class="promotion-piece" onclick="selectPromotion('n')" id="promo-n">♘</div>
+            </div>
+        </div>
+
+        <div class="game-over-dialog" id="gameOverDialog">
+            <div class="game-over-title" id="gameOverTitle">Checkmate!</div>
+            <div class="game-over-message" id="gameOverMessage"></div>
+            <button class="game-over-button" onclick="restartGame()">New Game</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let gameId = null;
+        let currentFen = null;
+        let selectedSquare = null;
+        let legalMoves = [];
+        let currentTurn = 'white';
+        let pendingPromotionMove = null;
+        let playerColor = 'white';
+        let boardFlipped = false;
+
+        const pieces = {
+            'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+            'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+        };
+
+        const pieceSymbols = {
+            'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+            'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+        };
+
+        function initBoard() {
+            const board = document.getElementById('chessBoard');
+            board.innerHTML = '';
+            
+            for (let rank = 8; rank >= 1; rank--) {
+                for (let file = 0; file < 8; file++) {
+                    const square = document.createElement('div');
+                    const squareName = String.fromCharCode(97 + file) + rank;
+                    square.id = squareName;
+                    square.className = `square ${(rank + file) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.dataset.square = squareName;
+                    
+                    // Add coordinates
+                    if (rank === 1) {
+                        const fileLabel = document.createElement('span');
+                        fileLabel.className = 'coordinates coords-file';
+                        fileLabel.textContent = String.fromCharCode(97 + file);
+                        square.appendChild(fileLabel);
+                    }
+                    if (file === 0) {
+                        const rankLabel = document.createElement('span');
+                        rankLabel.className = 'coordinates coords-rank';
+                        rankLabel.textContent = rank;
+                        square.appendChild(rankLabel);
+                    }
+                    
+                    square.addEventListener('click', () => handleSquareClick(squareName));
+                    board.appendChild(square);
+                }
+            }
+        }
+
+        function clearBoard() {
+            for (let rank = 1; rank <= 8; rank++) {
+                for (let file = 0; file < 8; file++) {
+                    const squareName = String.fromCharCode(97 + file) + rank;
+                    const square = document.getElementById(squareName);
+                    if (square) {
+                        const coords = square.querySelectorAll('.coordinates');
+                        square.textContent = '';
+                        square.classList.remove('white-piece', 'black-piece');
+                        coords.forEach(coord => square.appendChild(coord));
+                    }
+                }
+            }
+        }
+
+        function updateBoard(fen) {
+            currentFen = fen;
+            const parts = fen.split(' ');
+            const boardFen = parts[0];
+            currentTurn = parts[1] === 'w' ? 'white' : 'black';
+            clearBoard();
+            
+            let rank = 8;
+            let file = 0;
+            
+            for (let char of boardFen) {
+                if (char === '/') {
+                    rank--;
+                    file = 0;
+                } else if (char >= '1' && char <= '8') {
+                    file += parseInt(char);
+                } else {
+                    const squareName = String.fromCharCode(97 + file) + rank;
+                    const square = document.getElementById(squareName);
+                    if (square) {
+                        const piece = pieces[char] || '';
+                        const coords = square.querySelectorAll('.coordinates');
+                        square.textContent = piece;
+                        square.classList.remove('white-piece', 'black-piece');
+                        if (piece && char >= 'A' && char <= 'Z') {
+                            square.classList.add('white-piece');
+                        } else if (piece && char >= 'a' && char <= 'z') {
+                            square.classList.add('black-piece');
+                        }
+                        coords.forEach(coord => square.appendChild(coord));
+                    }
+                    file++;
+                }
+            }
+        }
+
+        function isLegalMove(fromSquare, toSquare) {
+            const move = fromSquare + toSquare;
+            if (legalMoves.includes(move)) {
+                return true;
+            }
+            for (const promo of ['q', 'r', 'b', 'n']) {
+                if (legalMoves.includes(move + promo)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function handleSquareClick(squareName) {
+            if (!gameId || currentTurn !== playerColor) return;
+
+            if (selectedSquare === squareName) {
+                clearSelection();
+                return;
+            }
+
+            if (!selectedSquare) {
+                selectedSquare = squareName;
+                document.getElementById(squareName).classList.add('selected');
+                highlightPossibleMoves(squareName);
+            } else {
+                if (isLegalMove(selectedSquare, squareName)) {
+                    makeMove(selectedSquare + squareName);
+                } else {
+                    clearSelection();
+                    selectedSquare = squareName;
+                    document.getElementById(squareName).classList.add('selected');
+                    highlightPossibleMoves(squareName);
+                }
+            }
+        }
+
+        function highlightPossibleMoves(fromSquare) {
+            legalMoves.forEach(move => {
+                const baseMove = move.length === 5 && 'qrbn'.includes(move[4])
+                    ? move.substring(0, 4)
+                    : move;
+                if (baseMove.startsWith(fromSquare)) {
+                    const toSquare = baseMove.substring(2);
+                    const square = document.getElementById(toSquare);
+                    if (square) {
+                        square.classList.add('possible-move');
+                    }
+                }
+            });
+        }
+
+        function clearSelection() {
+            if (selectedSquare) {
+                document.getElementById(selectedSquare).classList.remove('selected');
+            }
+            document.querySelectorAll('.possible-move').forEach(sq => {
+                sq.classList.remove('possible-move');
+            });
+            selectedSquare = null;
+        }
+
+        async function createNewGame(color = 'white') {
+            try {
+                playerColor = color;
+                boardFlipped = color === 'black';
+                
+                const response = await fetch(`${API_BASE}/games`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                gameId = data.game_id;
+                updateBoard(data.board_state);
+                legalMoves = data.legal_moves;
+                updateGameInfo(data.status, data.turn);
+                updateCapturedPieces(data.captured_white || [], data.captured_black || []);
+                clearSelection();
+
+                const board = document.getElementById('chessBoard');
+                if (boardFlipped) {
+                    board.classList.add('flipped');
+                } else {
+                    board.classList.remove('flipped');
+                }
+
+                if (color === 'black') {
+                    await getAIMove();
+                }
+            } catch (error) {
+            }
+        }
+
+        async function makeMove(move, promotion = null) {
+            if (!gameId) return;
+
+            try {
+                const requestBody = { move: move };
+                if (promotion) {
+                    requestBody.promotion = promotion;
+                }
+
+                const response = await fetch(`${API_BASE}/games/${gameId}/move`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    clearSelection();
+                    return;
+                }
+
+                if (data.requires_promotion === true) {
+                    pendingPromotionMove = move;
+                    showPromotionDialog();
+                    return;
+                }
+
+                if (!data.success) {
+                    clearSelection();
+                    return;
+                }
+
+                updateBoard(data.board_state);
+                legalMoves = data.legal_moves;
+                updateGameInfo(data.status, data.turn);
+                updateCapturedPieces(data.captured_white || [], data.captured_black || []);
+                clearSelection();
+                if (data.status === 'in_progress') {
+                    getAIMove();
+                }
+            } catch (error) {
+                clearSelection();
+            }
+        }
+
+        function showPromotionDialog() {
+            const dialog = document.getElementById('promotionDialog');
+            dialog.classList.add('show');
+            const isWhite = currentTurn === 'white';
+            document.getElementById('promo-q').textContent = isWhite ? '♕' : '♛';
+            document.getElementById('promo-r').textContent = isWhite ? '♖' : '♜';
+            document.getElementById('promo-b').textContent = isWhite ? '♗' : '♝';
+            document.getElementById('promo-n').textContent = isWhite ? '♘' : '♞';
+        }
+
+        function hidePromotionDialog() {
+            const dialog = document.getElementById('promotionDialog');
+            dialog.classList.remove('show');
+            pendingPromotionMove = null;
+        }
+
+        function selectPromotion(piece) {
+            if (pendingPromotionMove) {
+                const move = pendingPromotionMove;
+                hidePromotionDialog();
+                makeMove(move, piece);
+            }
+        }
+
+        async function getAIMove() {
+            if (!gameId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/games/${gameId}/ai-move`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                updateBoard(data.board_state);
+                legalMoves = data.legal_moves;
+                updateGameInfo(data.status, data.turn);
+                updateCapturedPieces(data.captured_white || [], data.captured_black || []);
+                clearSelection();
+            } catch (error) {
+            }
+        }
+
+        function updateGameInfo(status, turn) {
+            document.getElementById('status').textContent = 
+                `Status: ${status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}`;
+            document.getElementById('turn').textContent = 
+                turn ? `Turn: ${turn.charAt(0).toUpperCase() + turn.slice(1)}` : '';
+            
+            if (status === 'checkmate') {
+                const winner = turn === 'white' ? 'Black' : 'White';
+                showGameOverDialog('Checkmate!', `${winner} wins!`);
+            }
+        }
+
+        function showGameOverDialog(title, message) {
+            document.getElementById('gameOverTitle').textContent = title;
+            document.getElementById('gameOverMessage').textContent = message;
+            document.getElementById('gameOverDialog').classList.add('show');
+        }
+
+        function hideGameOverDialog() {
+            document.getElementById('gameOverDialog').classList.remove('show');
+        }
+
+        function restartGame() {
+            hideGameOverDialog();
+            createNewGame(playerColor);
+        }
+
+        function updateCapturedPieces(capturedWhite, capturedBlack) {
+            const whiteEl = document.getElementById('capturedWhite');
+            const blackEl = document.getElementById('capturedBlack');
+            
+            whiteEl.textContent = capturedWhite.map(p => pieceSymbols[p] || p).join(' ');
+            blackEl.textContent = capturedBlack.map(p => pieceSymbols[p] || p).join(' ');
+        }
+
+        async function loadAIConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/config`);
+                const data = await response.json();
+                const aiInfo = document.getElementById('aiInfo');
+                if (data.use_stockfish) {
+                    aiInfo.textContent = `AI: Stockfish (${data.stockfish_elo} ELO)`;
+                } else {
+                    aiInfo.textContent = 'AI: Random moves';
+                }
+            } catch (error) {
+            }
+        }
+
+        initBoard();
+        loadAIConfig();
+    </script>
+</body>
+</html>
